@@ -1,0 +1,73 @@
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+# Dictionary to store user fitness data
+fitness_data = {}
+
+# Start command handler
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Welcome to Fitness Tracking Bot! Send /track to start tracking your fitness activities.')
+
+# Track command handler
+def track(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in fitness_data:
+        fitness_data[user_id] = {'steps': 0, 'calories': 0}
+
+    update.message.reply_text('Enter your fitness data in the format: /track <steps> <calories>')
+
+# Message handler for tracking fitness data
+def track_fitness(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in fitness_data:
+        update.message.reply_text('Send /track to start tracking your fitness activities.')
+        return
+
+    try:
+        args = context.args
+        steps = int(args[0])
+        calories = int(args[1])
+
+        fitness_data[user_id]['steps'] += steps
+        fitness_data[user_id]['calories'] += calories
+
+        update.message.reply_text('Fitness data recorded successfully!')
+    except (IndexError, ValueError):
+        update.message.reply_text('Invalid input! Use the format: /track <steps> <calories>')
+
+# View command handler
+def view(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in fitness_data:
+        update.message.reply_text('Send /track to start tracking your fitness activities.')
+        return
+
+    steps = fitness_data[user_id]['steps']
+    calories = fitness_data[user_id]['calories']
+
+    message = f'Fitness Data:\nSteps: {steps}\nCalories: {calories}'
+    update.message.reply_text(message)
+
+def main() -> None:
+    # Create the Updater and pass it your bot's token
+    updater = Updater("YOUR_BOT_TOKEN")
+
+    # Get the dispatcher to register handlers
+    dispatcher = updater.dispatcher
+
+    # Add command handlers
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("track", track))
+    dispatcher.add_handler(CommandHandler("view", view))
+
+    # Add a message handler for tracking fitness data
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, track_fitness))
+
+    # Start the Bot
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process receives SIGINT, SIGTERM or SIGABRT
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
